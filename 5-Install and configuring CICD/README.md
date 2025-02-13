@@ -1339,6 +1339,7 @@ jobs:
 ![img7](https://github.com/user-attachments/assets/8dd901af-5043-4d07-b58e-123b1689449a)
 
 
+https://hub.docker.com/repository/docker/slava1005/nginx/general
 
 
 
