@@ -1,24 +1,51 @@
-Подготовка cистемы мониторинга и деплой приложения
-Решение:
-4.1 Деплой в кластер prometheus, grafana, alertmanager, экспортер основных метрик Kubernetes.
+## Подготовка cистемы мониторинга и деплой приложения
+```
+Уже должны быть готовы конфигурации для автоматического создания облачной инфраструктуры и поднятия Kubernetes кластера.
+Теперь необходимо подготовить конфигурационные файлы для настройки нашего Kubernetes кластера.
+
+Цель:
+
+Задеплоить в кластер prometheus, grafana, alertmanager, экспортер основных метрик Kubernetes.
+Задеплоить тестовое приложение, например, nginx сервер отдающий статическую страницу.
+Способ выполнения:
+
+Воспользоваться пакетом kube-prometheus, который уже включает в себя Kubernetes оператор для grafana, prometheus, alertmanager и node_exporter. Альтернативный вариант - использовать набор helm чартов от bitnami.
+
+Если на первом этапе вы не воспользовались Terraform Cloud, то задеплойте и настройте в кластере atlantis для отслеживания изменений инфраструктуры. Альтернативный вариант 3 задания: вместо Terraform Cloud или atlantis настройте на автоматический запуск и применение конфигурации terraform из вашего git-репозитория в выбранной вами CI-CD системе при любом комите в main ветку. Предоставьте скриншоты работы пайплайна из CI/CD системы.
+
+Ожидаемый результат:
+
+Git репозиторий с конфигурационными файлами для настройки Kubernetes.
+Http доступ на 80 порту к web интерфейсу grafana.
+Дашборды в grafana отображающие состояние Kubernetes кластера.
+Http доступ на 80 порту к тестовому приложению.
+```
+
+## Решение:
+
+### 4.1 Деплой в кластер prometheus, grafana, alertmanager, экспортер основных метрик Kubernetes.
+
 Для решения задачи деплоя в кластер prometheus, grafana, alertmanager, экспортер основных метрик Kubernetes воспользуемся решением kube-prometheus.
 
 Склонируем репозиторий
 
 git clone https://github.com/prometheus-operator/kube-prometheus.git
+
 Переходим в папку с kube-prometheus
-
+```
 debian@master-1:~$ cd kube-prometheus/
+```
 Создадим мониторинг стека с использование конфигурации в manifests каталоге:
-
+```
 debian@master-1:~$ kubectl apply --server-side -f manifests/setup
 debian@master-1:~$ kubectl wait \
  --for condition=Established \
  --all CustomResourceDefinition \
  --namespace=monitoring
 debian@master-1:~$ kubectl apply -f manifests/
+```
 Убедимся, что маниторинг развернулся и работает:
-
+```
 debian@master-1:~$ ~/kube-prometheus$ kubectl get all -n monitoring
 NAME                                      READY   STATUS    RESTARTS   AGE
 pod/alertmanager-main-0                   2/2     Running   0          16h
@@ -68,17 +95,18 @@ replicaset.apps/prometheus-operator-97cccfbf7   1         1         1       16h
 NAME                                 READY   AGE
 statefulset.apps/alertmanager-main   3/3     16h
 statefulset.apps/prometheus-k8s      2/2     16h
-
+```
 Чтобы подключиться снаружи к Grafana необходимо изменить порт с ClusterIP на NodePort
-
+```
 debian@master-1:~/kube-prometheus$ cat <<EOF > ~/patch.yml
 spec:
   type: NodePort
 EOF
 debian@master-1:~/kube-prometheus$ kubectl patch svc grafana -n monitoring --patch-file ~/patch.yml
 service/grafana patched
+```
 Проверим изменения
-
+```
 debian@master-1:~/kube-prometheus$ kubectl get svc -n monitoring
 NAME                    TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
 alertmanager-main       ClusterIP   10.233.50.221   <none>        9093/TCP,8080/TCP            16h
@@ -91,7 +119,5 @@ prometheus-adapter      ClusterIP   10.233.2.9      <none>        443/TCP       
 prometheus-k8s          ClusterIP   10.233.51.127   <none>        9090/TCP,8080/TCP            16h
 prometheus-operated     ClusterIP   None            <none>        9090/TCP                     16h
 prometheus-operator     ClusterIP   None            <none>        8443/TCP                     16h
-
+```
 Проверим Http доступ к web интерфейсу grafana:
-
-И ТУТ ВСЕ... не могу подключиться 
