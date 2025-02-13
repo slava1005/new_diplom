@@ -85,17 +85,17 @@ updated_at: "2025-02-11T15:39:58.507834Z"
 all:
   hosts:
     master-1:
-      ansible_host: 51.250.7.66
+      ansible_host: 51.250.71.6
       ip: 10.0.1.34
       access_ip: 10.0.1.34
       ansible_user: debian
     worker-1:
-      ansible_host: 84.201.159.138
+      ansible_host: 89.169.147.181
       ip: 10.0.1.19
       access_ip: 10.0.1.19
       ansible_user: debian
     worker-2:
-      ansible_host: 89.169.142.229
+      ansible_host: 84.252.129.115
       ip: 10.0.1.10
       access_ip: 10.0.1.10
       ansible_user: debian
@@ -178,10 +178,13 @@ master-1                   : ok=13   changed=10   unreachable=0    failed=0    s
 ```
 
 Далее зайдем на master-node и запустим ansible-playbook kubspray для установки кластера kubernetes с помощью следующей команды.
+
 ```
 ansible-playbook -i inventory/mycluster/hosts.yml cluster.yml -b -v -u debian
 ```
+
 Результат выполнения playbook:
+
 ```
 PLAY RECAP ***************************************************************************************************************************************************************************************************
 master-1                   : ok=642  changed=40   unreachable=0    failed=0    skipped=1096 rescued=0    ignored=5
@@ -213,11 +216,14 @@ network_plugin/calico : Start Calico resources ---------------------------------
 ```
 
 Для выполнения команд kubectl без sudo скопируем папку .kube в домашнюю дирректорию пользователя и сменим владельца, а также группу владельцев папки с файлами:
+
 ```
 debian@master-1:~/kubespray$ sudo cp -r /root/.kube ~/
 debian@master-1:~/kubespray$ sudo chown -R debian:debian ~/.kube
 ```
+
 Проверим работоспособность кластера:
+
 ```
 debian@master-1:~/kubespray$ kubectl get pods --all-namespaces
 NAMESPACE     NAME                                       READY   STATUS    RESTARTS   AGE
