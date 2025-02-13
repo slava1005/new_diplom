@@ -1,14 +1,31 @@
-Создание тестового приложения
-Решение:
-Подготовим тестовое приложение.
+## Создание тестового приложения
+```
+Для перехода к следующему этапу необходимо подготовить тестовое приложение, эмулирующее основное приложение разрабатываемое вашей компанией.
 
-Созададим отдельный git репозиторий Test-application с простым nginx конфигом, который будет отдавать статические данные:
+Способ подготовки:
+
+Рекомендуемый вариант:
+а. Создайте отдельный git репозиторий с простым nginx конфигом, который будет отдавать статические данные.
+б. Подготовьте Dockerfile для создания образа приложения.
+Альтернативный вариант:
+а. Используйте любой другой код, главное, чтобы был самостоятельно создан Dockerfile.
+Ожидаемый результат:
+
+Git репозиторий с тестовым приложением и Dockerfile.
+Регистри с собранным docker image. В качестве регистри может быть DockerHub или Yandex Container Registry, созданный также с помощью terraform.
+```
+
+## Решение:
+### Подготовим тестовое приложение.
+
+Создадим отдельный git репозиторий Test-application с простым nginx конфигом, который будет отдавать статические данные:
 
 Клонируем репозиторий:
-
-https://github.com/slava1005/Test-application.git
-
+```
+debian@master-1:~ git clone https://github.com/slava1005/Test-application.git
+```
 Создадим в этом репозитории файл содержащую HTML-код ниже:
+
 index.html
 
 ```
@@ -33,7 +50,7 @@ COPY index.html /usr/share/nginx/html
 
 Создадим папку для приложения mkdir mynginx и скопируем в нее ранее созданые файлы.
 В этой папке выполним сборку приложения:
-
+```
 sudo docker build -t slava1005/nginx:v1 .
 [sudo] password for slava:
 
@@ -59,15 +76,16 @@ Step 2/2 : COPY index.html /usr/share/nginx/html
  ---> 4f39d84fd609
 Successfully built 4f39d84fd609
 Successfully tagged slava1005/nginx:v1
+```
 
 Проверим, что образ создался:
-
+```
 slava@DESKTOP-QKJU13U:~/mynginx$ sudo docker images
 REPOSITORY                             TAG           IMAGE ID       CREATED          SIZE
 slava1005/nginx                        v1            4f39d84fd609   26 seconds ago   47.9MB
-
+```
 Запустим docker-контейнер с созданным образом и проверим его работоспособность:
-
+```
 slava@DESKTOP-QKJU13U:~/mynginx$ sudo docker run -d -p 80:80 slava1005/nginx:v1
 4f191ffc35860e1d50aaaf8246157e1c8d05dc5063d2e72870c23ecef95c1380
 slava@DESKTOP-QKJU13U:~/mynginx$ docker ps
@@ -83,9 +101,9 @@ Hey, Netology
 <h1>I’m new DevOps Engineer!</h1>
 </body>
 </html>
-
+```
 Загрузим созданный образ в реестр Docker Hub:
-
+```
 slava@DESKTOP-QKJU13U:~/mynginx$ docker push slava1005/nginx:v1
 The push refers to repository [docker.io/slava1005/nginx]
 da7eb4620ffd: Pushed
@@ -94,6 +112,7 @@ da7eb4620ffd: Pushed
 74964efcae21: Mounted from library/nginx
 ad4f5bc987ca: Mounted from library/nginx
 ef050c9a03b5: Mounted from library/nginx
+```
 83c20bc61eb8: Mounted from library/nginx
 1024e8977b69: Mounted from library/nginx
 a0904247e36a: Mounted from library/nginx
