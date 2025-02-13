@@ -9,9 +9,13 @@
 Задеплоить тестовое приложение, например, nginx сервер отдающий статическую страницу.
 Способ выполнения:
 
-Воспользоваться пакетом kube-prometheus, который уже включает в себя Kubernetes оператор для grafana, prometheus, alertmanager и node_exporter. Альтернативный вариант - использовать набор helm чартов от bitnami.
+Воспользоваться пакетом kube-prometheus, который уже включает в себя Kubernetes оператор для grafana, prometheus, alertmanager
+и node_exporter. Альтернативный вариант - использовать набор helm чартов от bitnami.
 
-Если на первом этапе вы не воспользовались Terraform Cloud, то задеплойте и настройте в кластере atlantis для отслеживания изменений инфраструктуры. Альтернативный вариант 3 задания: вместо Terraform Cloud или atlantis настройте на автоматический запуск и применение конфигурации terraform из вашего git-репозитория в выбранной вами CI-CD системе при любом комите в main ветку. Предоставьте скриншоты работы пайплайна из CI/CD системы.
+Если на первом этапе вы не воспользовались Terraform Cloud, то задеплойте и настройте в кластере atlantis для отслеживания изменений
+инфраструктуры. Альтернативный вариант 3 задания: вместо Terraform Cloud или atlantis настройте на автоматический запуск и применение
+конфигурации terraform из вашего git-репозитория в выбранной вами CI-CD системе при любом комите в main ветку. Предоставьте скриншоты
+работы пайплайна из CI/CD системы.
 
 Ожидаемый результат:
 
@@ -121,3 +125,100 @@ prometheus-operated     ClusterIP   None            <none>        9090/TCP      
 prometheus-operator     ClusterIP   None            <none>        8443/TCP                     16h
 ```
 Проверим Http доступ к web интерфейсу grafana:
+![img81111](https://github.com/user-attachments/assets/312c1ce1-b208-49c4-91c6-dcd66674c1fd)
+
+Выведем в grafana Дашборды отображающие состояние Kubernetes кластера:
+![img5_4](https://github.com/user-attachments/assets/02b66ddd-7804-4c05-8499-3c4433250af8)
+
+### 4.2 Деплой тестового приложения, например, nginx сервер отдающий статическую страницу.
+Создадим папку для приложения и перейдем в нее ```mkdir application && cd application```
+
+Создадим namespace application для приложения
+
+application-ns.yml
+```
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: application
+```
+Создадим DeamonSet, чтобы развернуть приложение на все worker-node:
+
+Nginx-DaemonSet.yml
+```
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nginx-deamonset
+  namespace: application
+spec:
+  selector:
+    matchLabels:
+      app: daemonset
+  template:
+    metadata:
+      labels:
+        app: daemonset
+    spec:
+      containers:
+      - name: nginx
+        image: slava1005/nginx:v1
+```
+Создадим Service для приложения с возможностью доступа снаружи кластера к nginx, используя тип порта NodePort.
+
+Nginx-Service.yml
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  namespace: application
+spec:
+  ports:
+    - name: nginx
+      port: 80
+      protocol: TCP
+      targetPort: 80
+      nodePort: 30000
+  selector:
+    app: daemonset
+  type: NodePort
+```
+Для развертывания приложения воспользуемся инструментом Kustomize
+
+kustomization.yml
+```
+namespace: application
+resources:
+- application-ns.yml
+- Nginx-DaemonSet.yml
+- Nginx-Service.yml
+```
+Развернем приложение
+```
+debian@master-1:~$ kubectl get all -n application
+NAME                        READY   STATUS    RESTARTS   AGE
+pod/nginx-deamonset-9w2ps   1/1     Running   0          3h50m
+pod/nginx-deamonset-qrklj   1/1     Running   0          3h50m
+
+NAME                    TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+service/nginx-service   NodePort   10.233.43.95   <none>        80:30000/TCP   3h50m
+
+NAME                             DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
+daemonset.apps/nginx-deamonset   2         2         2       2            2           <none>          3h50m
+```
+Проверим Http доступ к тестовому приложению:
+![img1](https://github.com/user-attachments/assets/62e7cdc8-c188-4f4f-aa6d-a4f13b01fbef)
+
+
+
+
+
+
+
+
+
+
+
+
+
