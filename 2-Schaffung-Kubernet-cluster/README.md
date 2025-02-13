@@ -1,10 +1,33 @@
-Создание Kubernetes кластера
-Решение:
-На этом этапе создадим Kubernetes кластер на базе предварительно созданной инфраструктуры.
+## Создание Kubernetes кластера
+```
+На этом этапе необходимо создать Kubernetes кластер на базе предварительно созданной инфраструктуры. Требуется обеспечить доступ к ресурсам из Интернета.
 
-2.1. При помощи Terraform подготовим 3 виртуальных машины Compute Cloud для создания Kubernetes-кластера: 1 master-node и 2 worker-node.
+Это можно сделать двумя способами:
+
+Рекомендуемый вариант: самостоятельная установка Kubernetes кластера.
+а. При помощи Terraform подготовить как минимум 3 виртуальных машины Compute Cloud для создания Kubernetes-кластера.
+Тип виртуальной машины следует выбрать самостоятельно с учётом требовании к производительности и стоимости. Если в дальнейшем поймете,
+что необходимо сменить тип инстанса, используйте Terraform для внесения изменений.
+б. Подготовить ansible конфигурации, можно воспользоваться, например Kubespray
+в. Задеплоить Kubernetes на подготовленные ранее инстансы, в случае нехватки каких-либо ресурсов вы всегда можете создать их при помощи Terraform.
+Альтернативный вариант: воспользуйтесь сервисом Yandex Managed Service for Kubernetes
+а. С помощью terraform resource для kubernetes создать региональный мастер kubernetes с размещением нод в разных 3 подсетях
+б. С помощью terraform resource для kubernetes node group
+Ожидаемый результат:
+
+Работоспособный Kubernetes кластер.
+В файле ~/.kube/config находятся данные для доступа к кластеру.
+Команда kubectl get pods --all-namespaces отрабатывает без ошибок.
+```
+
+## Решение:
+### На этом этапе создадим Kubernetes кластер на базе предварительно созданной инфраструктуры.
+
+### 2.1. При помощи Terraform подготовим 3 виртуальных машины Compute Cloud для создания Kubernetes-кластера: 
+### 1 master-node и 2 worker-node.
+
 Проверим созданные ресурсы с помощью CLI:
-
+```
 slava@DESKTOP-QKJU13U:~/new_diplom/2-Schaffung-Kubernet-cluster/config/terraform$ yc vpc network list
 +----------------------+------+
 |          ID          | NAME |
@@ -55,9 +78,10 @@ anonymous_access_flags:
   config_read: false
 created_at: "2025-02-11T15:29:03.391547Z"
 updated_at: "2025-02-11T15:39:58.507834Z"
-
-Так же, помимо создание ВМ, сделаем с помощью terraform генерацию файлика hosts.yml с разу в папку с ansible для последующего cоздания kubernetes-кластера при помощи ansible-playbook kubsprey. Файл hosts.yml
-
+```
+Так же, помимо создание ВМ, сделаем с помощью terraform генерацию файлика hosts.yml с разу в папку с ansible для последующего cоздания kubernetes-кластера 
+при помощи ansible-playbook kubsprey. Файл hosts.yml
+```
 all:
   hosts:
     master-1:
@@ -92,10 +116,13 @@ all:
         kube_node:
     calico_rr:
       hosts: {}
+```
 
+### 2.2. Подготовим ansible конфигурацию для установки kubspray.
 
-2.2. Подготовим ansible конфигурацию для установки kubspray.
-Запустим выполнение ansible-playbook на master-node, который скачает kubspray, установит все необходимые для него зависимости из файла requirements.txt и скопирует на мастер приватный ключ.
+Запустим выполнение ansible-playbook на master-node, который скачает kubspray, установит все необходимые для него зависимости 
+из файла requirements.txt и скопирует на мастер приватный ключ.
+```
 slava@DESKTOP-QKJU13U:~/new_diplom/2-Schaffung-Kubernet-cluster/config/ansible$ ansible-playbook -i inventory/hosts.yml site.yml                                                                              
 PLAY [Установка pip] ***************************************************************************************************************
 
@@ -148,13 +175,14 @@ changed: [master-1]
 
 PLAY RECAP *************************************************************************************************************************
 master-1                   : ok=13   changed=10   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+```
 
 Далее зайдем на master-node и запустим ansible-playbook kubspray для установки кластера kubernetes с помощью следующей команды.
-
+```
 ansible-playbook -i inventory/mycluster/hosts.yml cluster.yml -b -v -u debian
-
+```
 Результат выполнения playbook:
-
+```
 PLAY RECAP ***************************************************************************************************************************************************************************************************
 master-1                   : ok=642  changed=40   unreachable=0    failed=0    skipped=1096 rescued=0    ignored=5
 worker-1                   : ok=445  changed=12   unreachable=0    failed=0    skipped=680  rescued=0    ignored=1
@@ -182,14 +210,15 @@ container-engine/runc : Download_file | Create dest directory on node ----------
 container-engine/nerdctl : Download_file | Create dest directory on node ------------------------------------------------------------------------------------------------------------------------------ 4.19s
 container-engine/crictl : Download_file | Create dest directory on node ------------------------------------------------------------------------------------------------------------------------------- 4.18s
 network_plugin/calico : Start Calico resources -------------------------------------------------------------------------------------------------------------------------------------------------------- 4.17s
-
+```
 
 Для выполнения команд kubectl без sudo скопируем папку .kube в домашнюю дирректорию пользователя и сменим владельца, а также группу владельцев папки с файлами:
+```
 debian@master-1:~/kubespray$ sudo cp -r /root/.kube ~/
 debian@master-1:~/kubespray$ sudo chown -R debian:debian ~/.kube
-
+```
 Проверим работоспособность кластера:
-
+```
 debian@master-1:~/kubespray$ kubectl get pods --all-namespaces
 NAMESPACE     NAME                                       READY   STATUS    RESTARTS   AGE
 kube-system   calico-kube-controllers-69d8557557-hrgtf   1/1     Running   0          4m14s
@@ -210,3 +239,4 @@ kube-system   nginx-proxy-worker-2                       1/1     Running   0    
 kube-system   nodelocaldns-r2cj8                         1/1     Running   0          3m58s
 kube-system   nodelocaldns-tw72v                         1/1     Running   0          3m58s
 kube-system   nodelocaldns-vbhzs                         1/1     Running   0          3m58s
+```
